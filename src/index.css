@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  --color-primary: #6C5CE7;
+  --color-primary-light: #A29BFE;
+  --color-primary-dark: #4834D4;
+  --color-accent: #00F5A0;
+  --color-accent-secondary: #00D9F5;
+  --color-bg-primary: #0A0A0F;
+  --color-bg-secondary: #12121A;
+  --color-bg-card: rgba(255, 255, 255, 0.05);
+  --color-bg-glass: rgba(255, 255, 255, 0.08);
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #A0A0B0;
+  --color-text-muted: #6B6B80;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-glow: rgba(108, 92, 231, 0.5);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --animate-scroll: scroll 40s linear infinite;
+
+  @keyframes scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+}
+
+[data-theme="light"] {
+  --color-bg-primary: #F8F9FA;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-card: rgba(0, 0, 0, 0.05);
+  --color-bg-glass: rgba(255, 255, 255, 0.9);
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #334155;
+  --color-text-muted: #52525B;
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-glow: rgba(108, 92, 231, 0.2);
+  
+  /* Darker versions for light mode to maintain contrast */
+  --color-primary: #4338CA;
+  --color-primary-light: #6366F1;
+  --color-accent: #047857;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] font-sans antialiased overflow-x-hidden transition-colors duration-300;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-[var(--color-bg-glass)] backdrop-blur-[20px] border border-[var(--color-border)] rounded-2xl shadow-sm;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)];
+  }
+  
+  .bg-gradient-hero {
+    background: linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+  }
+}

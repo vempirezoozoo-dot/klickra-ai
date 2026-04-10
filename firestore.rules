@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required, immutable) - Firebase Auth UID
+    //   - email: string (required) - User's email
+    //   - displayName: string (optional) - User's name
+    //   - photoURL: string (optional) - User's photo URL
+    //   - role: string (required) - 'client' or 'admin'
+    //   - createdAt: timestamp (required, immutable) - Creation time
+    //
+    // Collection: inquiries
+    // Document ID: {inquiryId}
+    // Fields:
+    //   - name: string (required)
+    //   - email: string (required)
+    //   - phone: string (optional)
+    //   - services: list (optional)
+    //   - budget: string (optional)
+    //   - timeline: string (optional)
+    //   - description: string (optional)
+    //   - status: string (required) - 'pending', 'reviewed', 'contacted'
+    //   - createdAt: timestamp (required, immutable)
+    //   - userId: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (request.auth.token.email == "vempirezoozoo@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Validation Functions
+    // ===============================================================
+    function isValidUser(data) {
+      let hasRequired = data.keys().hasAll(['uid', 'email', 'role', 'createdAt']);
+      let validTypes = data.uid is string && data.uid.size() > 0 && data.uid.size() < 128 &&
+                       data.email is string && isValidEmail(data.email) && data.email.size() < 256 &&
+                       data.role in ['client', 'admin'] &&
+                       data.createdAt is timestamp;
+      let validOptional = (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+                          (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 2048));
+      return hasRequired && validTypes && validOptional;
+    }
+
+    function isValidInquiry(data) {
+      let hasRequired = data.keys().hasAll(['name', 'email', 'status', 'createdAt']);
+      let validTypes = data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+                       data.email is string && isValidEmail(data.email) && data.email.size() < 256 &&
+                       data.status in ['pending', 'reviewed', 'contacted'] &&
+                       data.createdAt is timestamp;
+      let validOptional = (!('phone' in data) || (data.phone is string && data.phone.size() < 50)) &&
+                          (!('services' in data) || (data.services is list && data.services.size() < 20)) &&
+                          (!('budget' in data) || (data.budget is string && data.budget.size() < 50)) &&
+                          (!('timeline' in data) || (data.timeline is string && data.timeline.size() < 50)) &&
+                          (!('description' in data) || (data.description is string && data.description.size() < 5000)) &&
+                          (!('userId' in data) || (data.userId is string && data.userId.size() < 128));
+      return hasRequired && validTypes && validOptional;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    isOwner(userId) && request.resource.data.uid == userId &&
+                    ((request.resource.data.role == 'client') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    isOwner(userId) && request.resource.data.uid == resource.data.uid &&
+                    request.resource.data.createdAt == resource.data.createdAt &&
+                    ((request.resource.data.role == resource.data.role) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /inquiries/{inquiryId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isValidInquiry(request.resource.data) && 
+                    (!('userId' in request.resource.data) || (isAuthenticated() && request.resource.data.userId == request.auth.uid)) &&
+                    request.resource.data.status == 'pending';
+      allow update: if isAdmin() && isValidInquiry(request.resource.data) && 
+                    request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+  }
+}

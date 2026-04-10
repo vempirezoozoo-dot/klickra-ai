@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Klickra platform",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["client", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "A contact form submission or service inquiry",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "budget": {
+          "type": "string"
+        },
+        "timeline": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "reviewed", "contacted"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Optional user ID if submitted while logged in"
+        }
+      },
+      "required": ["name", "email", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "User profiles"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": {
+        "$ref": "#/entities/Inquiry"
+      },
+      "description": "Contact form submissions"
+    }
+  }
+}
