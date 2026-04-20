@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
-import { Check, ExternalLink, ArrowRight, X, Loader2 } from 'lucide-react';
+import { Check, ExternalLink, ArrowRight, X, Loader2, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export default function Pricing() {
   const [isAnnual, setIsAnnual] = useState(true);
@@ -40,17 +50,72 @@ export default function Pricing() {
     }
   ];
 
-  const handlePayment = (plan: any) => {
+  const handlePayment = async (plan: any) => {
     setSelectedPlan(plan);
     setIsRedirecting(true);
     
-    // Open Razorpay in new tab with amount parameter
-    window.open(`https://razorpay.me/@akshaykumar6678?amount=${plan.price}`, '_blank');
-    
-    // Simulate a short delay before showing the "Complete Payment" UI
-    setTimeout(() => {
+    try {
+      const resLoad = await loadRazorpayScript();
+      if (!resLoad) {
+        alert("Razorpay SDK failed to load. Are you online?");
+        setIsRedirecting(false);
+        setSelectedPlan(null);
+        return;
+      }
+
+      const response = await fetch('/api/create-razorpay-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: plan.price, planName: plan.name })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create order');
+      }
+      
+      const options = {
+        key: data.key_id,
+        amount: data.amount.toString(),
+        currency: data.currency,
+        name: "Your Company",
+        description: `${plan.name} Plan`,
+        order_id: data.order_id,
+        handler: function (response: any) {
+          navigate(`/payment-success?plan=${encodeURIComponent(plan.name)}&amount=${plan.price}&order_id=${response.razorpay_order_id}`);
+        },
+        prefill: {
+          name: "Customer Name",
+          email: "customer@example.com",
+          contact: "9999999999"
+        },
+        theme: {
+          color: "#6C5CE7"
+        },
+        modal: {
+          ondismiss: function() {
+            setIsRedirecting(false);
+            setSelectedPlan(null);
+          }
+        }
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.on('payment.failed', function (response: any) {
+        alert(response.error.description || "Payment failed");
+        setIsRedirecting(false);
+        setSelectedPlan(null);
+      });
+      
+      paymentObject.open();
+
+    } catch (error) {
+      console.error(error);
+      alert('Payment initialization failed. Please try again.');
       setIsRedirecting(false);
-    }, 1500);
+      setSelectedPlan(null);
+    }
   };
 
   const confirmPayment = () => {
@@ -110,11 +175,14 @@ export default function Pricing() {
               
               <button 
                 onClick={() => handlePayment(plan)}
-                className={`w-full py-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 ${plan.popular ? 'bg-[var(--color-text-primary)] text-[var(--color-bg-primary)] hover:bg-[var(--color-primary)] hover:text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:border-[var(--color-primary)]'}`}
+                disabled={isRedirecting}
+                className={`w-full py-4 rounded-xl font-bold transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 ${plan.popular ? 'bg-[var(--color-text-primary)] text-[var(--color-bg-primary)] hover:bg-[var(--color-primary)] hover:text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-border)] hover:border-[var(--color-primary)]'}`}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-1">
-                  <path d="M12 2L2 12L12 22L22 12L12 2Z" fill="currentColor" className={plan.popular ? 'text-[var(--color-bg-primary)]' : 'text-[#3395FF]'}/>
-                </svg>
+                {isRedirecting && selectedPlan?.name === plan.name ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <CreditCard className="w-5 h-5" />
+                )}
                 Pay with Razorpay
               </button>
             </div>
@@ -124,65 +192,24 @@ export default function Pricing() {
 
       {/* Payment Processing Modal */}
       <AnimatePresence>
-        {selectedPlan && (
+        {selectedPlan && isRedirecting && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedPlan(null)}
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-lg glass-panel p-8 overflow-hidden"
+              className="relative w-full max-w-lg glass-panel p-8 overflow-hidden text-center"
             >
-              <button 
-                onClick={() => setSelectedPlan(null)}
-                className="absolute top-4 right-4 text-[var(--color-text-muted)] hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-
-              <div className="text-center">
-                {isRedirecting ? (
-                  <div className="py-12">
-                    <Loader2 className="w-16 h-16 text-[var(--color-primary)] animate-spin mx-auto mb-6" />
-                    <h3 className="text-2xl font-bold mb-2">Redirecting to Razorpay</h3>
-                    <p className="text-[var(--color-text-secondary)]">Please complete your payment in the new tab.</p>
-                  </div>
-                ) : (
-                  <div className="py-6">
-                    <div className="w-16 h-16 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center mx-auto mb-6">
-                      <ExternalLink className="w-8 h-8 text-[var(--color-primary)]" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-2">Payment Initiated</h3>
-                    <p className="text-[var(--color-text-secondary)] mb-8">
-                      We've opened the Razorpay payment page for your <strong>{selectedPlan.name}</strong> plan.
-                    </p>
-                    
-                    <div className="space-y-4">
-                      <button 
-                        onClick={confirmPayment}
-                        className="w-full py-4 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-black font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-                      >
-                        I've Completed the Payment <ArrowRight className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => window.open(`https://razorpay.me/@akshaykumar6678?amount=${selectedPlan.price}`, '_blank')}
-                        className="w-full py-4 rounded-xl border border-[var(--color-border)] text-[var(--color-text-primary)] font-bold hover:bg-[var(--color-bg-secondary)] transition-colors flex items-center justify-center gap-2"
-                      >
-                        Re-open Payment Page <ExternalLink className="w-4 h-4" />
-                      </button>
-                    </div>
-                    
-                    <p className="mt-6 text-xs text-[var(--color-text-muted)]">
-                      Having trouble? Contact our support team for assistance.
-                    </p>
-                  </div>
-                )}
+              <div className="py-12">
+                <Loader2 className="w-16 h-16 text-[var(--color-primary)] animate-spin mx-auto mb-6" />
+                <h3 className="text-2xl font-bold mb-2">Generating Payment Form</h3>
+                <p className="text-[var(--color-text-secondary)]">Please wait while we initialize Razorpay checkout securely.</p>
               </div>
             </motion.div>
           </div>

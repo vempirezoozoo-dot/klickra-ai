@@ -53,13 +53,14 @@ export default function ServiceDetail() {
   const schema = {
     "@context": "https://schema.org",
     "@type": "Service",
-    "serviceType": service.title,
+    "name": service.title,
+    "description": service.description,
     "provider": {
       "@type": "ProfessionalService",
       "name": "Klickra",
       "url": "https://klickra.com"
     },
-    "description": service.description,
+    "serviceType": service.title,
     "areaServed": "Worldwide",
     "hasOfferCatalog": {
       "@type": "OfferCatalog",

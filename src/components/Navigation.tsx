@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, ChevronDown, Sun, Moon } from 'lucide-react';
-import { auth, db, signInWithGoogle, logOut } from '../firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { db, signInWithGoogle, logOut, subscribeToAuthChanges, AppUser } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 interface NavigationProps {
@@ -13,8 +12,7 @@ interface NavigationProps {
 export default function Navigation({ onToggleTheme, currentTheme }: NavigationProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState<AppUser | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,23 +24,8 @@ export default function Navigation({ onToggleTheme, currentTheme }: NavigationPr
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = subscribeToAuthChanges((currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          if (userDoc.exists() && userDoc.data().role === 'admin') {
-            setIsAdmin(true);
-          } else {
-            setIsAdmin(false);
-          }
-        } catch (error) {
-          console.error("Error fetching user role", error);
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
-      }
     });
     return () => unsubscribe();
   }, []);
@@ -110,7 +93,7 @@ export default function Navigation({ onToggleTheme, currentTheme }: NavigationPr
 
           {user ? (
             <>
-              {isAdmin && (
+              {user.role === 'admin' && (
                 <Link to="/leads" className="text-sm font-medium text-[var(--color-primary-light)] hover:text-[var(--color-text-primary)] transition-colors">Leads</Link>
               )}
               <Link to="/dashboard" className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors">Dashboard</Link>

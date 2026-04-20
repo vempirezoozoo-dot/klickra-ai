@@ -18,6 +18,7 @@ export default function Contact() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const serviceOptions = [
     'SEO / SXO', 'Web Design', 'Web App Development', 
@@ -32,13 +33,46 @@ export default function Contact() {
         ? prev.services.filter(s => s !== service)
         : [...prev.services, service]
     }));
+    if (errors.services) setErrors(prev => ({ ...prev, services: '' }));
   };
 
-  const nextStep = () => setStep(prev => prev + 1);
+  const validateStep = (currentStep: number) => {
+    const newErrors: { [key: string]: string } = {};
+    if (currentStep === 1) {
+      if (!formData.name.trim()) newErrors.name = "Name is required.";
+      else if (formData.name.trim().length < 2) newErrors.name = "Name must be at least 2 characters.";
+      
+      if (!formData.email.trim()) newErrors.email = "Email is required.";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = "Please enter a valid email address.";
+
+      if (formData.phone && !/^\+?[\d\s-]{10,}$/.test(formData.phone)) {
+        newErrors.phone = "Phone number is invalid.";
+      }
+    } else if (currentStep === 2) {
+      if (formData.services.length === 0) newErrors.services = "Please select at least one service.";
+    } else if (currentStep === 3) {
+      if (!formData.budget) newErrors.budget = "Please select a budget range.";
+      if (!formData.timeline) newErrors.timeline = "Please select a timeline.";
+    } else if (currentStep === 4) {
+      if (!formData.description.trim()) newErrors.description = "Project description is required.";
+      else if (formData.description.trim().length < 10) newErrors.description = "Please provide more details (at least 10 characters).";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const nextStep = () => {
+    if (validateStep(step)) {
+      setStep(prev => prev + 1);
+    }
+  };
+  
   const prevStep = () => setStep(prev => prev - 1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateStep(4)) return;
     setIsSubmitting(true);
     setError('');
 
@@ -138,21 +172,21 @@ export default function Contact() {
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Name *</label>
                     <input 
                       type="text" 
-                      required
                       value={formData.name}
-                      onChange={e => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                      onChange={e => { setFormData({...formData, name: e.target.value}); if (errors.name) setErrors(prev => ({...prev, name: ''})) }}
+                      className={`w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border ${errors.name ? 'border-red-500' : 'border-[var(--color-border)]'} text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]`}
                     />
+                    {errors.name && <p className="text-red-500 text-xs mt-2">{errors.name}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Email *</label>
                     <input 
                       type="email" 
-                      required
                       value={formData.email}
-                      onChange={e => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                      onChange={e => { setFormData({...formData, email: e.target.value}); if (errors.email) setErrors(prev => ({...prev, email: ''})) }}
+                      className={`w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border ${errors.email ? 'border-red-500' : 'border-[var(--color-border)]'} text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]`}
                     />
+                    {errors.email && <p className="text-red-500 text-xs mt-2">{errors.email}</p>}
                   </div>
                 </div>
                 <div>
@@ -160,15 +194,15 @@ export default function Contact() {
                   <input 
                     type="tel" 
                     value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]"
+                    onChange={e => { setFormData({...formData, phone: e.target.value}); if (errors.phone) setErrors(prev => ({...prev, phone: ''})) }}
+                    className={`w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border ${errors.phone ? 'border-red-500' : 'border-[var(--color-border)]'} text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-primary)]`}
                   />
+                  {errors.phone && <p className="text-red-500 text-xs mt-2">{errors.phone}</p>}
                 </div>
                 <button 
                   type="button"
                   onClick={nextStep}
-                  disabled={!formData.name || !formData.email}
-                  className="w-full py-4 rounded-xl bg-white text-black font-bold disabled:opacity-50"
+                  className="w-full py-4 rounded-xl bg-white text-black font-bold hover:bg-gray-100 transition-colors"
                 >
                   Next Step
                 </button>
@@ -177,26 +211,29 @@ export default function Contact() {
 
             {step === 2 && (
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-4">What services are you interested in?</label>
-                <div className="flex flex-wrap gap-3">
-                  {serviceOptions.map(service => (
-                    <button
-                      key={service}
-                      type="button"
-                      onClick={() => handleServiceToggle(service)}
-                      className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
-                        formData.services.includes(service) 
-                          ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' 
-                          : 'bg-transparent border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary-light)]'
-                      }`}
-                    >
-                      {service}
-                    </button>
-                  ))}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-4">What services are you interested in?</label>
+                  <div className="flex flex-wrap gap-3">
+                    {serviceOptions.map(service => (
+                      <button
+                        key={service}
+                        type="button"
+                        onClick={() => handleServiceToggle(service)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                          formData.services.includes(service) 
+                            ? 'bg-[var(--color-primary)] border-[var(--color-primary)] text-white' 
+                            : 'bg-transparent border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary-light)]'
+                        }`}
+                      >
+                        {service}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.services && <p className="text-red-500 text-xs mt-4">{errors.services}</p>}
                 </div>
                 <div className="flex gap-4">
-                  <button type="button" onClick={prevStep} className="flex-1 py-4 rounded-xl border border-[var(--color-border)] text-white">Back</button>
-                  <button type="button" onClick={nextStep} disabled={formData.services.length === 0} className="flex-1 py-4 rounded-xl bg-white text-black font-bold disabled:opacity-50">Next Step</button>
+                  <button type="button" onClick={prevStep} className="flex-1 py-4 rounded-xl border border-[var(--color-border)] text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-bg-secondary)]">Back</button>
+                  <button type="button" onClick={nextStep} className="flex-1 py-4 rounded-xl bg-white text-black font-bold transition-colors hover:bg-gray-100">Next Step</button>
                 </div>
               </div>
             )}
@@ -208,8 +245,8 @@ export default function Contact() {
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Budget Range</label>
                     <select 
                       value={formData.budget}
-                      onChange={e => setFormData({...formData, budget: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-white focus:outline-none focus:border-[var(--color-primary)]"
+                      onChange={e => { setFormData({...formData, budget: e.target.value}); if (errors.budget) setErrors(prev => ({...prev, budget: ''})) }}
+                      className={`w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border ${errors.budget ? 'border-red-500' : 'border-[var(--color-border)]'} text-white focus:outline-none focus:border-[var(--color-primary)]`}
                     >
                       <option value="">Select a range</option>
                       <option value="< $5k">Less than $5,000</option>
@@ -217,13 +254,14 @@ export default function Contact() {
                       <option value="$10k - $25k">$10,000 - $25,000</option>
                       <option value="$25k+">$25,000+</option>
                     </select>
+                    {errors.budget && <p className="text-red-500 text-xs mt-2">{errors.budget}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Timeline</label>
                     <select 
                       value={formData.timeline}
-                      onChange={e => setFormData({...formData, timeline: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-white focus:outline-none focus:border-[var(--color-primary)]"
+                      onChange={e => { setFormData({...formData, timeline: e.target.value}); if (errors.timeline) setErrors(prev => ({...prev, timeline: ''})) }}
+                      className={`w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border ${errors.timeline ? 'border-red-500' : 'border-[var(--color-border)]'} text-white focus:outline-none focus:border-[var(--color-primary)]`}
                     >
                       <option value="">Select timeline</option>
                       <option value="ASAP">ASAP</option>
@@ -231,11 +269,12 @@ export default function Contact() {
                       <option value="3-6 months">3-6 months</option>
                       <option value="Flexible">Flexible</option>
                     </select>
+                    {errors.timeline && <p className="text-red-500 text-xs mt-2">{errors.timeline}</p>}
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <button type="button" onClick={prevStep} className="flex-1 py-4 rounded-xl border border-[var(--color-border)] text-white">Back</button>
-                  <button type="button" onClick={nextStep} className="flex-1 py-4 rounded-xl bg-white text-black font-bold">Next Step</button>
+                  <button type="button" onClick={prevStep} className="flex-1 py-4 rounded-xl border border-[var(--color-border)] text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-bg-secondary)]">Back</button>
+                  <button type="button" onClick={nextStep} className="flex-1 py-4 rounded-xl bg-white text-black font-bold transition-colors hover:bg-gray-100">Next Step</button>
                 </div>
               </div>
             )}
@@ -247,17 +286,18 @@ export default function Contact() {
                   <textarea 
                     rows={5}
                     value={formData.description}
-                    onChange={e => setFormData({...formData, description: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border border-[var(--color-border)] text-white focus:outline-none focus:border-[var(--color-primary)]"
+                    onChange={e => { setFormData({...formData, description: e.target.value}); if (errors.description) setErrors(prev => ({...prev, description: ''})) }}
+                    className={`w-full px-4 py-3 rounded-xl bg-[var(--color-bg-secondary)] border ${errors.description ? 'border-red-500' : 'border-[var(--color-border)]'} text-white focus:outline-none focus:border-[var(--color-primary)]`}
                     placeholder="Tell us about your goals..."
                   ></textarea>
+                  {errors.description && <p className="text-red-500 text-xs mt-2">{errors.description}</p>}
                 </div>
                 <div className="flex gap-4">
-                  <button type="button" onClick={prevStep} className="flex-1 py-4 rounded-xl border border-[var(--color-border)] text-white">Back</button>
+                  <button type="button" onClick={prevStep} className="flex-1 py-4 rounded-xl border border-[var(--color-border)] text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-bg-secondary)]">Back</button>
                   <button 
                     type="submit" 
                     disabled={isSubmitting}
-                    className="flex-1 py-4 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-black font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="flex-1 py-4 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-black font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] transition-transform"
                   >
                     {isSubmitting ? (
                       <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</>

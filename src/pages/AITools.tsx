@@ -192,9 +192,9 @@ export default function AITools() {
     
     setIsUtilityLoading(true);
     try {
-      const prompt = \`Act as an expert SEO and AI architect. Perform a \${activeUtilityTool} analysis for: \${utilityUrl}. 
+      const prompt = `Act as an expert SEO and AI architect. Perform a ${activeUtilityTool} analysis for: ${utilityUrl}. 
       Provide a detailed, structured response in Markdown format.
-      Tool: \${activeUtilityTool}\`;
+      Tool: ${activeUtilityTool}`;
       
       const result = await callOpenRouter([
         { role: "user", content: prompt }
@@ -237,7 +237,7 @@ export default function AITools() {
           
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
             <span className="text-sm font-medium">Free Uses Remaining:</span>
-            <span className={\`text-sm font-bold \${usageCount >= MAX_FREE_USES ? 'text-red-500' : 'text-[var(--color-primary)]'}\`}>
+            <span className={`text-sm font-bold ${usageCount >= MAX_FREE_USES ? 'text-red-500' : 'text-[var(--color-primary)]'}`}>
               {Math.max(0, MAX_FREE_USES - usageCount)} / {MAX_FREE_USES}
             </span>
             {usageCount >= MAX_FREE_USES && (
@@ -253,7 +253,7 @@ export default function AITools() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={\`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all \${activeTab === tab.id ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}\`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
             >
               {tab.icon} {tab.label}
             </button>
@@ -425,7 +425,7 @@ export default function AITools() {
                     <button
                       key={tool.id}
                       onClick={() => setActiveUtilityTool(tool.id)}
-                      className={\`w-full text-left p-4 rounded-xl border transition-all \${activeUtilityTool === tool.id ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]' : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/50'}\`}
+                      className={`w-full text-left p-4 rounded-xl border transition-all ${activeUtilityTool === tool.id ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]' : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/50'}`}
                     >
                       <div className="font-bold text-[var(--color-text-primary)]">{tool.label}</div>
                       <div className="text-xs text-[var(--color-text-secondary)]">{tool.desc}</div>
